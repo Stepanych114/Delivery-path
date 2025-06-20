@@ -8,46 +8,89 @@ import java.util.*;
 public class DeliveryRouteOptimizer {
     private final int[][] distances;
     private final int n;
-
+    private Map<Integer, List<Order>> locationToOrders; 
+    private long[][] dp; 
+    private int[][] next; 
+    private static final long INF = Long.MAX_VALUE / 2;
     public DeliveryRouteOptimizer(int[][] graph) {
         this.n = graph.length;
         this.distances = GraphUtils.initializeGraph(graph);
         GraphUtils.floydWarshall(distances);
     }
 
-    private boolean isValidRoute(List<Integer> route, List<Order> orders) {
-        int currentTime = 0;
-        int currentLocation = route.get(0); 
-
-        for (int i = 1; i < route.size(); i++) {
-            int nextLocation = route.get(i);
-            int travelTime = distances[currentLocation][nextLocation];
-            currentTime += travelTime;
-
-            
-            for (Order order : orders) {
-                if (order.getLocation() == nextLocation) {
-                    if (currentTime > order.getDeadline()) {
-                        return false;
-                    }
-                }
+    
+    private boolean isValidVisit(int nextLocation, long currentTime) {
+        List<Order> orders = locationToOrders.getOrDefault(nextLocation, Collections.emptyList());
+        for (Order order : orders) {
+            if (currentTime > order.getDeadline()) {
+                return false;
             }
-            currentLocation = nextLocation;
         }
         return true;
     }
 
-    
-    private void permute(List<Integer> locations, int start, List<List<Integer>> permutations) {
-        if (start == locations.size()) {
-            permutations.add(new ArrayList<>(locations));
-        } else {
-            for (int i = start; i < locations.size(); i++) {
-                Collections.swap(locations, start, i);
-                permute(locations, start + 1, permutations);
-                Collections.swap(locations, start, i);
+    private void prepareLocationToOrders(List<Order> orders) {
+        locationToOrders = new HashMap<>();
+        for (Order order : orders) {
+            locationToOrders.computeIfAbsent(order.getLocation(), k -> new ArrayList<>()).add(order);
+        }
+    }
+
+   
+    private long dpSolve(int current, int visited, List<Integer> locations, long currentTime) {
+        int k = locations.size();
+        if (visited == (1 << k) - 1) { 
+            return 0;
+        }
+
+        if (dp[current][visited] != -1) {
+            return dp[current][visited];
+        }
+
+        long minDistance = INF;
+        int minNext = -1;
+
+        for (int i = 0; i < k; i++) {
+            if ((visited & (1 << i)) == 0) {
+                int nextLocation = locations.get(i);
+                long travelDistance = distances[current][nextLocation];
+                long newTime = currentTime + travelDistance;
+
+                if (isValidVisit(nextLocation, newTime)) {
+                    long result = dpSolve(nextLocation, visited | (1 << i), locations, newTime);
+                    if (result != INF && travelDistance + result < minDistance) {
+                        minDistance = travelDistance + result;
+                        minNext = i;
+                    }
+                }
             }
         }
+
+        dp[current][visited] = minDistance;
+        next[current][visited] = minNext;
+        return minDistance;
+    }
+
+    private List<Integer> reconstructPath(int start, List<Integer> locations) {
+        List<Integer> route = new ArrayList<>();
+        route.add(start);
+        int current = start;
+        int visited = 0;
+        long currentTime = 0;
+
+        while (visited != (1 << locations.size()) - 1) {
+            int nextIdx = next[current][visited];
+            if (nextIdx == -1) {
+                return null; 
+            }
+            int nextLocation = locations.get(nextIdx);
+            route.add(nextLocation);
+            currentTime += distances[current][nextLocation];
+            current = nextLocation;
+            visited |= (1 << nextIdx);
+        }
+
+        return route;
     }
 
     public List<Integer> findDeliveryRoute(int start, List<Order> orders) {
@@ -58,7 +101,6 @@ public class DeliveryRouteOptimizer {
             return Collections.singletonList(start);
         }
 
-        
         Set<Integer> orderLocations = new HashSet<>();
         for (Order order : orders) {
             if (order.getLocation() >= n) {
@@ -66,24 +108,24 @@ public class DeliveryRouteOptimizer {
             }
             orderLocations.add(order.getLocation());
         }
+        prepareLocationToOrders(orders);
 
-        
         List<Integer> locations = new ArrayList<>(orderLocations);
-        List<List<Integer>> permutations = new ArrayList<>();
-        permute(locations, 0, permutations);
-
-        
-        for (List<Integer> perm : permutations) {
-            List<Integer> route = new ArrayList<>();
-            route.add(start); 
-            route.addAll(perm); 
-
-            if (isValidRoute(route, orders)) {
-                return route;
-            }
+        int k = locations.size();
+        dp = new long[n][1 << k];
+        next = new int[n][1 << k];
+        for (long[] row : dp) {
+            Arrays.fill(row, -1);
+        }
+        for (int[] row : next) {
+            Arrays.fill(row, -1);
         }
 
-        return null; 
+        long minDistance = dpSolve(start,0, locations,0);
+        if (minDistance == INF) {
+            return null;
+        }
+        return reconstructPath(start, locations);
     }
 
     public boolean isDeliveryPossible(int start, List<Order> orders) {

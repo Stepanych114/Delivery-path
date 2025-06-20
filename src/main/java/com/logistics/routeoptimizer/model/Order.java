@@ -6,10 +6,10 @@ public class Order {
 
     public Order(int location, int deadline) {
         if (location < 0) {
-            throw new IllegalArgumentException("Location index cannot be negative");
+            throw new IllegalArgumentException("Индекс локации не может быть отрицательным");
         }
         if (deadline < 0) {
-            throw new IllegalArgumentException("Deadline cannot be negative");
+            throw new IllegalArgumentException("Дедлайн не может быть отрицательным");
         }
         this.location = location;
         this.deadline = deadline;

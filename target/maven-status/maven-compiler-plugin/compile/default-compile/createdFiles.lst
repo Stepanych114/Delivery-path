@@ -1,4 +1,5 @@
 com\logistics\routeoptimizer\model\Order.class
 com\logistics\routeoptimizer\util\GraphUtils.class
+com\logistics\routeoptimizer\visualizer\RouteVisualizer.class
 com\logistics\routeoptimizer\DeliveryRouteOptimizer.class
 com\logistics\routeoptimizer\Main.class

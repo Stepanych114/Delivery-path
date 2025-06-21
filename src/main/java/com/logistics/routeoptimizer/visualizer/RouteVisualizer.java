@@ -83,7 +83,7 @@ public class RouteVisualizer extends Application {
         GraphicsContext gc = graphCanvas.getGraphicsContext2D();
     gc.clearRect(0, 0, graphCanvas.getWidth(), graphCanvas.getHeight());
 
-        edgeInputs.getChildren().add(new Label("Введите времена между локациями (в минутах):"));
+        edgeInputs.getChildren().add(new Label("Введите время между локациями (в минутах):"));
         for (int i = 0; i <= n; i++) {
             for (int j = i + 1; j <= n; j++) {
                 HBox edgeRow = new HBox(5);
